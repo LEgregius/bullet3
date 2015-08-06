@@ -505,7 +505,9 @@ int btGeneric6DofSpring2Constraint::setLinearLimits(btConstraintInfo2* info, int
 			limot.m_servoTarget         = m_linearLimits.m_servoTarget[i];
 			limot.m_enableSpring        = m_linearLimits.m_enableSpring[i];
 			limot.m_springStiffness     = m_linearLimits.m_springStiffness[i];
+			limot.m_springStiffnessLimited = m_linearLimits.m_springStiffnessLimited[i];
 			limot.m_springDamping       = m_linearLimits.m_springDamping[i];
+			limot.m_springDampingLimited   = m_linearLimits.m_springDampingLimited[i];
 			limot.m_equilibriumPoint    = m_linearLimits.m_equilibriumPoint[i];
 			limot.m_hiLimit             = m_linearLimits.m_upperLimit[i];
 			limot.m_loLimit             = m_linearLimits.m_lowerLimit[i];
@@ -785,12 +787,12 @@ int btGeneric6DofSpring2Constraint::get_limit_motor_info2(
 
 
 		//limit stiffness (the spring should not be sampled faster that the quarter of its angular frequency)
-		if( 0.25 < angularfreq * dt)
+		if(limot->m_springStiffnessLimited && 0.25 < angularfreq * dt)
 		{
-			ks = BT_ONE / dt / dt / btScalar(16.0) / m;
+			ks = BT_ONE / dt / dt / btScalar(16.0) * m;
 		}
-		//avoid overdamping
-		if(kd * dt > m)
+		//avoid damping that would blow up the spring
+		if(limot->m_springDampingLimited && kd * dt > m)
 		{
 			kd = m / dt;
 		}
@@ -1023,22 +1025,28 @@ void btGeneric6DofSpring2Constraint::enableSpring(int index, bool onOff)
 		m_angularLimits[index - 3] .m_enableSpring = onOff;
 }
 
-void btGeneric6DofSpring2Constraint::setStiffness(int index, btScalar stiffness)
+void btGeneric6DofSpring2Constraint::setStiffness(int index, btScalar stiffness, bool limitIfNeeded)
 {
 	btAssert((index >= 0) && (index < 6));
-	if (index<3)
+	if (index<3) {
 		m_linearLimits.m_springStiffness[index] = stiffness;
-	else
+		m_linearLimits.m_springStiffnessLimited[index] = limitIfNeeded;
+	} else {
 		m_angularLimits[index - 3] .m_springStiffness = stiffness;
+		m_angularLimits[index - 3].m_springStiffnessLimited = limitIfNeeded;
+}
 }
 
-void btGeneric6DofSpring2Constraint::setDamping(int index, btScalar damping)
+void btGeneric6DofSpring2Constraint::setDamping(int index, btScalar damping, bool limitIfNeeded)
 {
 	btAssert((index >= 0) && (index < 6));
-	if (index<3)
+	if (index<3) {
 		m_linearLimits.m_springDamping[index] = damping;
-	else
+		m_linearLimits.m_springDampingLimited[index] = limitIfNeeded;
+	} else {
 		m_angularLimits[index - 3] .m_springDamping = damping;
+		m_angularLimits[index - 3].m_springDampingLimited = limitIfNeeded;
+}
 }
 
 void btGeneric6DofSpring2Constraint::setEquilibriumPoint()

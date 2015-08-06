@@ -86,7 +86,9 @@ public:
 	btScalar m_servoTarget;
 	bool     m_enableSpring;
 	btScalar m_springStiffness;
+	bool     m_springStiffnessLimited;
 	btScalar m_springDamping;
+	bool     m_springDampingLimited;
 	btScalar m_equilibriumPoint;
 
 	btScalar m_currentLimitError;
@@ -110,7 +112,9 @@ public:
 		m_servoTarget         = 0;
 		m_enableSpring        = false;
 		m_springStiffness     = 0;
+		m_springStiffnessLimited = false;
 		m_springDamping       = 0;
+		m_springDampingLimited   = false;
 		m_equilibriumPoint    = 0;
 
 		m_currentLimitError   = 0;
@@ -135,7 +139,9 @@ public:
 		m_servoTarget         = limot.m_servoTarget;
 		m_enableSpring        = limot.m_enableSpring;
 		m_springStiffness     = limot.m_springStiffness;
+		m_springStiffnessLimited = limot.m_springStiffnessLimited;
 		m_springDamping       = limot.m_springDamping;
+		m_springDampingLimited   = limot.m_springDampingLimited;
 		m_equilibriumPoint    = limot.m_equilibriumPoint;
 
 		m_currentLimitError   = limot.m_currentLimitError;
@@ -174,7 +180,9 @@ public:
 	bool      m_enableSpring[3];
 	btVector3 m_servoTarget;
 	btVector3 m_springStiffness;
+	bool      m_springStiffnessLimited[3];
 	btVector3 m_springDamping;
+	bool      m_springDampingLimited[3];
 	btVector3 m_equilibriumPoint;
 	btVector3 m_targetVelocity;
 	btVector3 m_maxMotorForce;
@@ -205,7 +213,9 @@ public:
 			m_enableSpring[i]     = false;
 			m_servoTarget[i]      = btScalar(0.f);
 			m_springStiffness[i]  = btScalar(0.f);
+			m_springStiffnessLimited[i] = false;
 			m_springDamping[i]    = btScalar(0.f);
+			m_springDampingLimited[i]   = false;
 			m_equilibriumPoint[i] = btScalar(0.f);
 			m_targetVelocity[i]   = btScalar(0.f);
 			m_maxMotorForce[i]    = btScalar(0.f);
@@ -235,7 +245,9 @@ public:
 			m_enableSpring[i]     = other.m_enableSpring[i];
 			m_servoTarget[i]      = other.m_servoTarget[i];
 			m_springStiffness[i]  = other.m_springStiffness[i];
+			m_springStiffnessLimited[i] = other.m_springStiffnessLimited[i];
 			m_springDamping[i]    = other.m_springDamping[i];
+			m_springDampingLimited[i]   = other.m_springDampingLimited[i];
 			m_equilibriumPoint[i] = other.m_equilibriumPoint[i];
 			m_targetVelocity[i]   = other.m_targetVelocity[i];
 			m_maxMotorForce[i]    = other.m_maxMotorForce[i];
@@ -467,8 +479,8 @@ public:
 	void setMaxMotorForce(int index, btScalar force);
 
 	void enableSpring(int index, bool onOff);
-	void setStiffness(int index, btScalar stiffness);
-	void setDamping(int index, btScalar damping);
+	void setStiffness(int index, btScalar stiffness, bool limitIfNeeded = true); // if limitIfNeeded is true the system will automatically limit the stiffness in necessary situations where otherwise the spring would move unrealistically too widely
+	void setDamping(int index, btScalar damping, bool limitIfNeeded = true); // if limitIfNeeded is true the system will automatically limit the damping in necessary situations where otherwise the spring would blow up
 	void setEquilibriumPoint(); // set the current constraint position/orientation as an equilibrium point for all DOF
 	void setEquilibriumPoint(int index);  // set the current constraint position/orientation as an equilibrium point for given DOF
 	void setEquilibriumPoint(int index, btScalar val);
@@ -502,6 +514,8 @@ struct btGeneric6DofSpring2ConstraintData
 	char               m_linearEnableMotor[4];
 	char               m_linearServoMotor[4];
 	char               m_linearEnableSpring[4];
+	char               m_linearSpringStiffnessLimited[4];
+	char               m_linearSpringDampingLimited[4];
 	char               m_padding1[4];
 
 	btVector3FloatData m_angularUpperLimit;
@@ -520,10 +534,10 @@ struct btGeneric6DofSpring2ConstraintData
 	char               m_angularEnableMotor[4];
 	char               m_angularServoMotor[4];
 	char               m_angularEnableSpring[4];
-	char               m_padding2[4];
+	char               m_angularSpringStiffnessLimited[4];
+	char               m_angularSpringDampingLimited[4];
 
 	int                m_rotateOrder;
-	char               m_padding3[4];
 };
 
 struct btGeneric6DofSpring2ConstraintDoubleData2
@@ -548,6 +562,8 @@ struct btGeneric6DofSpring2ConstraintDoubleData2
 	char                m_linearEnableMotor[4];
 	char                m_linearServoMotor[4];
 	char                m_linearEnableSpring[4];
+	char                m_linearSpringStiffnessLimited[4];
+	char                m_linearSpringDampingLimited[4];
 	char                m_padding1[4];
 
 	btVector3DoubleData m_angularUpperLimit;
@@ -566,10 +582,10 @@ struct btGeneric6DofSpring2ConstraintDoubleData2
 	char                m_angularEnableMotor[4];
 	char                m_angularServoMotor[4];
 	char                m_angularEnableSpring[4];
-	char                m_padding2[4];
+	char                m_angularSpringStiffnessLimited[4];
+	char                m_angularSpringDampingLimited[4];
 
 	int                 m_rotateOrder;
-	char                m_padding3[4];
 };
 
 SIMD_FORCE_INLINE int btGeneric6DofSpring2Constraint::calculateSerializeBufferSize() const
@@ -620,6 +636,8 @@ SIMD_FORCE_INLINE const char* btGeneric6DofSpring2Constraint::serialize(void* da
 		dof->m_angularEnableMotor[i]  = i < 3 ? ( m_angularLimits[i].m_enableMotor ? 1 : 0 ) : 0;
 		dof->m_angularServoMotor[i]   = i < 3 ? ( m_angularLimits[i].m_servoMotor ? 1 : 0 ) : 0;
 		dof->m_angularEnableSpring[i] = i < 3 ? ( m_angularLimits[i].m_enableSpring ? 1 : 0 ) : 0;
+		dof->m_angularSpringStiffnessLimited[i] = i < 3 ? ( m_angularLimits[i].m_springStiffnessLimited ? 1 : 0 ) : 0;
+		dof->m_angularSpringDampingLimited[i]   = i < 3 ? ( m_angularLimits[i].m_springDampingLimited ? 1 : 0 ) : 0;
 	}
 
 	m_linearLimits.m_lowerLimit.serialize( dof->m_linearLowerLimit );
@@ -640,6 +658,8 @@ SIMD_FORCE_INLINE const char* btGeneric6DofSpring2Constraint::serialize(void* da
 		dof->m_linearEnableMotor[i]  = i < 3 ? ( m_linearLimits.m_enableMotor[i] ? 1 : 0 ) : 0;
 		dof->m_linearServoMotor[i]   = i < 3 ? ( m_linearLimits.m_servoMotor[i] ? 1 : 0 ) : 0;
 		dof->m_linearEnableSpring[i] = i < 3 ? ( m_linearLimits.m_enableSpring[i] ? 1 : 0 ) : 0;
+		dof->m_linearSpringStiffnessLimited[i] = i < 3 ? ( m_linearLimits.m_springStiffnessLimited[i] ? 1 : 0 ) : 0;
+		dof->m_linearSpringDampingLimited[i]   = i < 3 ? ( m_linearLimits.m_springDampingLimited[i] ? 1 : 0 ) : 0;
 	}
 
 	dof->m_rotateOrder = m_rotateOrder;
