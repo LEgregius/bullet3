@@ -60,7 +60,19 @@
 		trigger = "enet",
 		description = "Enable enet NAT punchthrough test"
 	}
+	newoption
+	{
+		trigger = "lua",
+		description = "Enable Lua scipting support in Example Browser"
+	}
 
+	 newoption {
+    trigger     = "targetdir",
+    value       = "path such as ../bin",
+    description = "Set the output location for the generated project files"
+  }
+	
+	
 	newoption
 	{
 		trigger = "without-gtest",
@@ -73,8 +85,8 @@
 	configuration "Debug"
 		defines {"_DEBUG=1"}
 		flags { "Symbols", "StaticRuntime" , "NoMinimalRebuild", "NoEditAndContinue" ,"FloatFast"}
-
-	if os.is("Linux") then
+	
+	if os.is("Linux") or os.is("macosx") then
 		if os.is64bit() then
 			platforms {"x64"}
 		else
@@ -124,7 +136,9 @@
 -- comment-out for now, URDF reader needs exceptions
 --	flags { "NoRTTI", "NoExceptions"}
 --	defines { "_HAS_EXCEPTIONS=0" }
-	targetdir "../bin"
+--printf ( _OPTIONS["targetdir"] )
+
+	targetdir( _OPTIONS["targetdir"] or "../bin" )
 	location("./" .. act .. postfix)
 
 
@@ -145,16 +159,22 @@ if not _OPTIONS["ios"] then
 
 	include "../examples/ExampleBrowser"
 	include "../examples/OpenGLWindow"
-	
+	include "../examples/SharedMemory"	
 	include "../examples/ThirdPartyLibs/Gwen"
+	include "../Extras"
 
 	include "../examples/HelloWorld"
 	include "../examples/BasicDemo"
+	include "../test/SharedMemory"
 	
 	if _OPTIONS["enet"] then
 		include "../examples/ThirdPartyLibs/enet"
 		include "../test/enet/client"
 		include "../test/enet/server"	
+	end
+
+	if _OPTIONS["lua"] then
+		include "../examples/ThirdPartyLibs/lua-5.2.3"
 	end
 	
 	include "../src/Bullet3Common"
